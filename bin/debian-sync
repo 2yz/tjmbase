@@ -1,0 +1,34 @@
+#!/bin/dash
+
+fatal() {
+  echo "$1"
+  exit 1
+}
+
+warn() {
+  echo "$1"
+}
+
+# Find a source mirror near you which supports rsync on
+# https://launchpad.net/ubuntu/+archivemirrors
+# rsync://<iso-country-code>.rsync.archive.ubuntu.com/ubuntu should always work
+RSYNCSOURCE=rsync://mirrors.tuna.tsinghua.edu.cn/debian
+
+# Define where you want the mirror-data to be on your mirror
+BASEDIR=/mirrors/debian
+
+if [ ! -d ${BASEDIR} ]; then
+  warn "${BASEDIR} does not exist yet, trying to create it..."
+  mkdir -p ${BASEDIR} || fatal "Creation of ${BASEDIR} failed."
+fi
+
+rsync --recursive --times --links --hard-links \
+  --stats --quiet \
+  --exclude "Packages*" --exclude "Sources*" \
+  --exclude "Release*" --exclude "InRelease" \
+  --exclude=i18n/* --exclude ls-lR* \
+  ${RSYNCSOURCE} ${BASEDIR} || fatal "First stage of sync failed."
+
+rsync --recursive --times --links --hard-links \
+  --stats --quiet --delete --delete-after \
+  ${RSYNCSOURCE} ${BASEDIR} || fatal "Second stage of sync failed."
